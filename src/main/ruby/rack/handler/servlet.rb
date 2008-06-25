@@ -46,6 +46,7 @@ module Rack
         env["REQUEST_METHOD"] ||= servlet_env.getMethod || "GET"
         env["SCRIPT_NAME"]    ||= "#{context_path}#{servlet_env.getServletPath}"
         env["REQUEST_URI"]    ||= servlet_env.getRequestURI || ""
+        env["REQUEST_URI"] += "?#{servlet_env.getQueryString}" if servlet_env.getQueryString
         path_info = servlet_env.getServletPath || ""
         path_info += servlet_env.getPathInfo if servlet_env.getPathInfo
         env["PATH_INFO"]      ||= path_info

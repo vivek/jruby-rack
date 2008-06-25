@@ -65,7 +65,7 @@ describe Rack::Handler::Servlet do
       env["REQUEST_METHOD"].should == "POST"
       env["SCRIPT_NAME"].should == "/override"
       env["PATH_INFO"].should == "/override"
-      env["REQUEST_URI"].should == "/override"
+      env["REQUEST_URI"].should == "/override?hello=there"
       env["QUERY_STRING"].should == "override"
       env["SERVER_NAME"].should == "override"
       env["SERVER_PORT"].should == "8080"
@@ -114,24 +114,42 @@ describe Rack::Handler::Servlet do
   end
 
   describe "add_variables" do
+    def stub_env(options = {})
+      options = {
+        :getContextPath => nil,
+        :getMethod => nil,
+        :getServletPath => "",
+        :getPathInfo => nil,
+        :getRequestURI => nil,
+        :getQueryString => nil,
+        :getServerName => nil,
+        :getRemoteHost => nil,
+        :getRemoteAddr => nil,
+        :getRemoteUser => nil,
+        :getServerPort => 80}.merge(options)
+      options.each {|k,v| @servlet_env.stub!(k).and_return v}
+    end
+
     it "should add cgi variables" do
-      @servlet_env.stub!(:getMethod).and_return "GET"
-      @servlet_env.stub!(:getContextPath).and_return "/app"
-      @servlet_env.stub!(:getServletPath).and_return "/script_name"
-      @servlet_env.stub!(:getPathInfo).and_return "/path/info"
-      @servlet_env.stub!(:getRequestURI).and_return "/app/script_name/path/info"
-      @servlet_env.stub!(:getQueryString).and_return "hello=there"
-      @servlet_env.stub!(:getServerName).and_return "localhost"
-      @servlet_env.stub!(:getServerPort).and_return 80
-      @servlet_env.stub!(:getRemoteHost).and_return "localhost"
-      @servlet_env.stub!(:getRemoteAddr).and_return "127.0.0.1"
-      @servlet_env.stub!(:getRemoteUser).and_return "admin"
+      stub_env({
+        :getMethod => "GET",
+        :getContextPath => "/app",
+        :getServletPath => "/script_name",
+        :getPathInfo => "/path/info",
+        :getRequestURI => "/app/script_name/path/info",
+        :getQueryString => "hello=there",
+        :getServerName => "localhost",
+        :getServerPort => 80,
+        :getRemoteHost => "localhost",
+        :getRemoteAddr => "127.0.0.1",
+        :getRemoteUser => "admin"
+      })
       env = {}
       @servlet.add_variables(@servlet_env, env)
       env["REQUEST_METHOD"].should == "GET"
       env["SCRIPT_NAME"].should == "/app/script_name"
       env["PATH_INFO"].should == "/script_name/path/info"
-      env["REQUEST_URI"].should == "/app/script_name/path/info"
+      env["REQUEST_URI"].should == "/app/script_name/path/info?hello=there"
       env["QUERY_STRING"].should == "hello=there"
       env["SERVER_NAME"].should == "localhost"
       env["SERVER_PORT"].should == "80"
@@ -141,17 +159,7 @@ describe Rack::Handler::Servlet do
     end
 
     it "should set environment variables to the empty string if their value is nil" do
-      @servlet_env.stub!(:getContextPath).and_return nil
-      @servlet_env.stub!(:getMethod).and_return nil
-      @servlet_env.stub!(:getServletPath).and_return ""
-      @servlet_env.stub!(:getPathInfo).and_return nil
-      @servlet_env.stub!(:getRequestURI).and_return nil    
-      @servlet_env.stub!(:getQueryString).and_return nil
-      @servlet_env.stub!(:getServerName).and_return nil
-      @servlet_env.stub!(:getRemoteHost).and_return nil
-      @servlet_env.stub!(:getRemoteAddr).and_return nil
-      @servlet_env.stub!(:getRemoteUser).and_return nil
-      @servlet_env.stub!(:getServerPort).and_return 80
+      stub_env
       env = {}
       @servlet.add_variables(@servlet_env, env)
       env.should have_key("REQUEST_METHOD")
@@ -166,20 +174,17 @@ describe Rack::Handler::Servlet do
     end
 
     it "should calculate path info from the servlet path and the path info" do
-      @servlet_env.stub!(:getContextPath).and_return "/context"
-      @servlet_env.stub!(:getMethod).and_return nil
-      @servlet_env.stub!(:getServletPath).and_return "/path"
-      @servlet_env.stub!(:getPathInfo).and_return nil
-      @servlet_env.stub!(:getRequestURI).and_return nil
-      @servlet_env.stub!(:getQueryString).and_return nil
-      @servlet_env.stub!(:getServerName).and_return nil
-      @servlet_env.stub!(:getRemoteHost).and_return nil
-      @servlet_env.stub!(:getRemoteAddr).and_return nil
-      @servlet_env.stub!(:getRemoteUser).and_return nil
-      @servlet_env.stub!(:getServerPort).and_return 80
+      stub_env :getContextPath => "/context", :getServletPath => "/path"
       env = {}
       @servlet.add_variables(@servlet_env, env)
       env["PATH_INFO"].should == "/path"
+    end
+
+    it "should include query string in the request URI" do
+      stub_env :getRequestURI => "/some/path", :getQueryString => "some=query&string"
+      env = {}
+      @servlet.add_variables(@servlet_env, env)
+      env["REQUEST_URI"].should == "/some/path?some=query&string"
     end
   end
 
