@@ -15,6 +15,7 @@ import javax.servlet.jsp.JspWriter;
 import javax.servlet.jsp.PageContext;
 import javax.servlet.jsp.el.ExpressionEvaluator;
 import javax.servlet.jsp.el.VariableResolver;
+import javax.el.ELContext;
 
 /**
  * Currently only used as a mock for testing.
@@ -158,6 +159,10 @@ public class FakePageContext extends PageContext {
 
     @Override
     public VariableResolver getVariableResolver() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public ELContext getELContext() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 }

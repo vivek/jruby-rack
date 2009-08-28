@@ -35,8 +35,73 @@
  */
 package org.jruby.rack.servlet;
 
+import org.jruby.rack.RackFilter;
+import org.jruby.rack.rails.RailsServletContextListener;
+import org.yaml.snakeyaml.Yaml;
+
+import javax.servlet.FilterRegistration;
+import javax.servlet.ServletContainerInitializer;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Map;
+import java.util.Set;
+
 /**
  * @author Vivek Pandey
  */
-public class RackContainerInitializer {
+public class RackContainerInitializer implements ServletContainerInitializer{
+    private final static String ENV_NAME="environment";
+    private final static String PUBLIC_ROOT_NAME="public.root";
+    private final static String JRUBY_MAX_RUNTIMES_NAME="jruby.max.runtimes";
+    private final static String RACK_FILTER_URL_PATTERN_NAME="rack.filter.urlpattern";
+
+    public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
+
+        String env = "development";
+        String publicRoot = "/";
+        String jrubyMaxRuntimes = "1";
+        String urlPattern = "/*";
+
+        InputStream is = ctx.getResourceAsStream("/WEB-INF/config/warble.yml");
+
+        if(is == null){
+            ctx.log("No warble.yml, will assume defaults. Loading with defauls:\n");
+            ctx.log(ENV_NAME+ env+"\n");
+            ctx.log(PUBLIC_ROOT_NAME+": "+ publicRoot+"\n");
+            ctx.log(JRUBY_MAX_RUNTIMES_NAME+": "+ jrubyMaxRuntimes+"\n");
+            ctx.log(RACK_FILTER_URL_PATTERN_NAME+": "+ urlPattern+"\n");
+        }else{
+            Yaml yml = new Yaml();
+            Map config = (Map) yml.load(new InputStreamReader(is));
+            if(config.get(ENV_NAME) != null){
+                env = (String) config.get(ENV_NAME);
+            }
+
+            if(config.get(PUBLIC_ROOT_NAME) != null){
+                publicRoot = (String) config.get(PUBLIC_ROOT_NAME);
+            }
+
+            if(config.get(JRUBY_MAX_RUNTIMES_NAME) != null){
+                jrubyMaxRuntimes = (String) config.get(JRUBY_MAX_RUNTIMES_NAME);
+            }
+
+            if(config.get(RACK_FILTER_URL_PATTERN_NAME) != null){
+                urlPattern = (String) config.get(RACK_FILTER_URL_PATTERN_NAME);
+            }
+        }
+        ctx.setInitParameter(ENV_NAME, env);
+        ctx.setInitParameter(PUBLIC_ROOT_NAME, publicRoot);
+        ctx.setInitParameter(JRUBY_MAX_RUNTIMES_NAME, jrubyMaxRuntimes);
+
+        //Create and configure the RackFilter
+        RackFilter filter = ctx.createFilter(RackFilter.class);
+        FilterRegistration.Dynamic filterConfig = ctx.addFilter("RackFilter", filter);
+        filterConfig.addMappingForUrlPatterns(null, true, urlPattern);
+
+        //Create and add RackListener
+        RailsServletContextListener listener = ctx.createListener(RailsServletContextListener.class);
+        ctx.addListener(listener);
+    }
 }

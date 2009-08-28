@@ -87,6 +87,12 @@ task :resources => ["target/classes", :unpack_gem, :update_version, :test_resour
   meta_inf = File.join(t.prerequisites.first, "META-INF")
   mkdir_p meta_inf
   cp "src/main/tld/jruby-rack.tld", meta_inf
+
+  #create META-INF/services/javax.servlet.ServletContainerInitializer to
+  #hook up RackContainerInitializer
+  meta_inf_services = File.join(meta_inf, "services")
+  mkdir_p meta_inf_services
+  cp "src/main/resources/javax.servlet.ServletContainerInitializer", meta_inf_services
 end
 
 task :speconly do
